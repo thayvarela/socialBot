@@ -1,14 +1,35 @@
 
-import { CollectedProfile, ActionPerformed, SocialAccount, Platform } from "../types";
+import { CollectedProfile, ActionPerformed, SocialAccount, Platform, SystemUser } from "../types";
 
 const STORAGE_KEYS = {
   PROFILES: 'socialbot_profiles_v2',
   ACTIONS: 'socialbot_actions_v2',
   INTERACTED: 'socialbot_interacted_v2',
-  ACCOUNTS: 'socialbot_accounts_v2'
+  ACCOUNTS: 'socialbot_accounts_v2',
+  SYS_USERS: 'socialbot_sys_users_v2'
 };
 
 export const db = {
+  // System Users (Auth Simulation)
+  getSystemUsers: (): any[] => {
+    const data = localStorage.getItem(STORAGE_KEYS.SYS_USERS);
+    return data ? JSON.parse(data) : [];
+  },
+
+  registerSystemUser: (user: { email: string, password: string }): boolean => {
+    const users = db.getSystemUsers();
+    if (users.some(u => u.email === user.email)) return false;
+    
+    const newUser = { ...user, id: crypto.randomUUID() };
+    localStorage.setItem(STORAGE_KEYS.SYS_USERS, JSON.stringify([...users, newUser]));
+    return true;
+  },
+
+  loginSystemUser: (email: string, pass: string): any | null => {
+    const users = db.getSystemUsers();
+    return users.find(u => u.email === email && u.password === pass) || null;
+  },
+
   // Accounts Management
   getAccounts: (): SocialAccount[] => {
     const data = localStorage.getItem(STORAGE_KEYS.ACCOUNTS);
@@ -68,18 +89,12 @@ export const db = {
     };
     localStorage.setItem(STORAGE_KEYS.ACTIONS, JSON.stringify([...actions, newAction]));
     
-    // Interacted list for ignoring
     const interactedKey = `${action.plataforma}_interacted`;
     const dataInteracted = localStorage.getItem(interactedKey);
     const interacted: string[] = dataInteracted ? JSON.parse(dataInteracted) : [];
     if (!interacted.includes(action.perfil_usuario)) {
         localStorage.setItem(interactedKey, JSON.stringify([...interacted, action.perfil_usuario]));
     }
-  },
-
-  getInteractedList: (platform: Platform): string[] => {
-    const data = localStorage.getItem(`${platform}_interacted`);
-    return data ? JSON.parse(data) : [];
   },
 
   clearAll: () => {
